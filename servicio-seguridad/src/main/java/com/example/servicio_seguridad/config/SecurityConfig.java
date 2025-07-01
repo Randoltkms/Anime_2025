@@ -1,9 +1,9 @@
 package com.example.servicio_seguridad.config;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -12,11 +12,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-
-
-
 import com.example.servicio_seguridad.security.UserDetailsServiceImpl;
-
 import lombok.RequiredArgsConstructor;
 
 @Configuration
@@ -29,10 +25,21 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(AbstractHttpConfigurer::disable)
-            .cors(Customizer.withDefaults())
+            .csrf(AbstractHttpConfigurer::disable) // CSRF deshabilitado globalmente
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/auth/**").permitAll()
+                // Permite acceso público a estos endpoints
+                .requestMatchers(
+                    "/",
+                    "/login", 
+                    "/register", 
+                    "/auth/**",
+                    "/css/**",
+                    "/js/**",
+                    "/images/**",
+                    "/chat-websocket/**",  // Endpoint principal de WebSocket
+                    "/topic/**",           // Destinos de suscripción
+                    "/app/**"             // Prefijo para enviar mensajes
+                ).permitAll()
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session
@@ -64,5 +71,4 @@ public class SecurityConfig {
                 .and()
                 .build();
     }
-   
 }

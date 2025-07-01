@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Inicio - Anime World</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .anime-img {
+            height: 300px;
+            object-fit: cover;
+        }
+        .anime-card {
+            height: 100%;
+        }
+        #chat-box {
+            height: 250px;
+            overflow-y: scroll;
+            background-color: #f8f9fa;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" th:href="@{/}">AnimeWorld</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item"><a class="nav-link" th:href="@{/}">Inicio</a></li>
+                <li class="nav-item"><a class="nav-link" href="#">Nosotros</a></li>
+                <li class="nav-item"><a class="nav-link" href="#">Contacto</a></li>
+                <li class="nav-item"><a class="nav-link" href="#">Favoritos</a></li>
+            </ul>
+
+            <ul class="navbar-nav">
+                <li class="nav-item" th:if="${username == null}">
+                    <a class="nav-link" th:href="@{/login}">Login</a>
+                </li>
+                <li class="nav-item" th:if="${username == null}">
+                    <a class="nav-link" th:href="@{/register}">Registrar</a>
+                </li>
+                <li class="nav-item dropdown" th:if="${username != null}">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <span th:text="${username}"></span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><span class="dropdown-item-text text-muted" th:text="${email}"></span></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" th:href="@{/logout}">Cerrar sesión</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- BUSCADOR Y FILTRO -->
+<div class="container mt-4">
+    <form th:action="@{/}" method="get" class="row mb-4">
+        <div class="col-md-5">
+            <input type="text" class="form-control" name="q" placeholder="Buscar anime..." th:value="${param.q}">
+        </div>
+        <div class="col-md-4">
+            <select class="form-select" name="categoria">
+                <option value="">Filtrar por género</option>
+                <option value="1">Acción</option>
+                <option value="4">Comedia</option>
+                <option value="8">Drama</option>
+                <option value="10">Fantasía</option>
+                <option value="14">Horror</option>
+                <option value="22">Romance</option>
+                <option value="24">Sci-Fi</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <button class="btn btn-primary w-100" type="submit">Buscar</button>
+        </div>
+    </form>
+
+    <!-- RESULTADOS -->
+    <h3 class="mb-3">Resultados</h3>
+    <div class="row" th:if="${animes != null}">
+        <div class="col-md-3 mb-4" th:each="anime : ${animes}">
+            <div class="card anime-card shadow-sm">
+                <img class="card-img-top anime-img" th:src="${anime.images.jpg.image_url}" th:alt="${anime.title}">
+                <div class="card-body">
+                    <h5 class="card-title" th:text="${anime.title}">Título</h5>
+                    <p class="card-text" th:text="${anime.synopsis}">Descripción del anime</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div th:if="${animes == null or #lists.isEmpty(animes)}">
+        <p class="text-muted">No se encontraron animes.</p>
+    </div>
+
+    <!-- CHAT -->
+    <div th:if="${username != null}" class="mt-5">
+        <h4>💬 Chat en tiempo real</h4>
+        <div id="chat-box" class="mb-3"></div>
+        <form id="form-chat" class="d-flex">
+            <input type="text" id="input-mensaje" class="form-control me-2" placeholder="Escribe un mensaje...">
+            <button type="submit" class="btn btn-primary">Enviar</button>
+        </form>
+    </div>
+</div>
+
+<!-- JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+
+<!-- CHAT SCRIPT -->
+<script th:inline="javascript">
+    const username = /*[[${username}]]*/ 'defaultUsername';
+    if (username && username !== 'defaultUsername') {
+        const socket = new SockJS('/chat-websocket');  // Cambiado de '/ws' a '/chat-websocket'
+        const stompClient = Stomp.over(socket);
+
+        stompClient.connect({}, () => {
+            stompClient.subscribe('/topic/mensajes', (msg) => {
+                const data = JSON.parse(msg.body);
+                const chatBox = document.getElementById('chat-box');
+                const div = document.createElement('div');
+                div.textContent = `[${data.hora}] ${data.emisor}: ${data.contenido}`;
+                chatBox.appendChild(div);
+                chatBox.scrollTop = chatBox.scrollHeight;
+            });
+        });
+
+        document.getElementById('form-chat').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const contenido = document.getElementById('input-mensaje').value;
+            if (contenido && stompClient.connected) {
+                stompClient.send("/app/chat", {}, JSON.stringify({
+                    emisor: username,
+                    contenido: contenido
+                }));
+                document.getElementById('input-mensaje').value = '';
+            }
+        });
+    }
+</script>
+
+</body>
+</html>

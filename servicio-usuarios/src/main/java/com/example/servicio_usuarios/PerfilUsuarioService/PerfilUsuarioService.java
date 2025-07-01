@@ -27,4 +27,18 @@
 	
 	        return perfilUsuarioRepository.save(perfil);
 	    }
+	    
+	    public PerfilUsuarioDTO obtenerPerfilPorUsername(String username) {
+	        PerfilUsuario perfil = perfilUsuarioRepository.findByUsername(username)
+	                .orElseThrow(() -> new RuntimeException("Perfil no encontrado: " + username));
+
+	        PerfilUsuarioDTO dto = new PerfilUsuarioDTO();
+	        dto.setUsername(perfil.getUsername());
+	        dto.setNombre(perfil.getNombre());
+	        dto.setEmail(perfil.getEmail());
+	        dto.setTelefono(perfil.getTelefono());
+	        dto.setDireccion(perfil.getDireccion());
+	        dto.setFechaRegistro(perfil.getFechaRegistro());
+	        return dto;
+	    }
 	}
